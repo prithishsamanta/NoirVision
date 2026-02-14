@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* ============================================
+   NOIRVISION — Design System
+   Urban Noir Detective Theme
+   ============================================ */
+
+@theme {
+  /* Noir Palette */
+  --color-noir-950: #0a0a14;
+  --color-noir-900: #111122;
+  --color-noir-800: #1a1a2e;
+  --color-noir-700: #16213e;
+  --color-noir-600: #1f2b47;
+  --color-noir-500: #2d3a56;
+  --color-noir-400: #4a5578;
+  --color-noir-300: #6b7494;
+  --color-noir-200: #9da3b8;
+  --color-noir-100: #c8ccdb;
+
+  /* Gold Accents */
+  --color-gold-500: #c9a227;
+  --color-gold-400: #d4a843;
+  --color-gold-300: #e0c068;
+  --color-gold-200: #edd89a;
+
+  /* Paper/Parchment */
+  --color-paper-100: #f4e4c1;
+  --color-paper-200: #e8d5a3;
+  --color-paper-300: #d6c089;
+  --color-paper-400: #c4a76e;
+
+  /* Verdict Colors */
+  --color-verdict-green: #2d8a4e;
+  --color-verdict-green-light: #3aaf63;
+  --color-verdict-green-glow: rgba(45, 138, 78, 0.3);
+  --color-verdict-red: #a83232;
+  --color-verdict-red-light: #d14545;
+  --color-verdict-red-glow: rgba(168, 50, 50, 0.3);
+
+  /* Typography */
+  --font-typewriter: 'Special Elite', 'Courier New', monospace;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Source Code Pro', monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-noir-950);
+  color: var(--color-noir-100);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   SCROLLBAR — Noir Theme
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-noir-900);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-noir-500);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-500);
+}
+
+/* ============================================
+   KEYFRAME ANIMATIONS
+   ============================================ */
+
+@keyframes stampSlam {
+  0% {
+    transform: rotate(-12deg) scale(4);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(-12deg) scale(0.9);
+    opacity: 0.9;
+  }
+  80% {
+    transform: rotate(-12deg) scale(1.05);
+    opacity: 0.85;
+  }
+  100% {
+    transform: rotate(-12deg) scale(1);
+    opacity: 0.75;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(201, 162, 39, 0.15); }
+  50% { box-shadow: 0 0 25px rgba(201, 162, 39, 0.35); }
+}
+
+@keyframes scanLine {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes gaugeReveal {
+  from {
+    stroke-dashoffset: 283;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.animate-stamp {
+  animation: stampSlam 0.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.animate-gauge {
+  animation: gaugeReveal 1.5s ease-out forwards;
+}
+
+/* Staggered children */
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* Paper texture overlay */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 28px,
+    rgba(0, 0, 0, 0.03) 28px,
+    rgba(0, 0, 0, 0.03) 29px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Vintage card */
+.vintage-card {
+  background: linear-gradient(145deg, var(--color-noir-800), var(--color-noir-900));
+  border: 1px solid var(--color-noir-600);
+  border-radius: 4px;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Gold separator */
+.gold-separator {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-gold-500) 20%,
+    var(--color-gold-500) 80%,
+    transparent
+  );
+  opacity: 0.4;
+}
