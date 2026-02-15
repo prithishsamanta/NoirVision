@@ -12,21 +12,21 @@ from app.noirvision_analyzer import NoirVisionAnalyzer
 from app.services.twelvelabs_client import run_analysis
 
 async def test():
-    print("🔬 Testing NoirVision Backend...")
+    print("Testing NoirVision Backend...")
     print()
     
     # Test video path
     video_path = Path("video/sample.mp4")
     if not video_path.exists():
-        print(f"❌ Video not found: {video_path}")
+        print(f"Video not found: {video_path}")
         return False
     
-    print(f"✅ Video found: {video_path}")
+    print(f"Video found: {video_path}")
     
     # Test claim
     claim = "Multiple vehicles including buses and trucks passing through a busy intersection."
     
-    print(f"✅ Claim: {claim[:70]}...")
+    print(f"Claim: {claim[:70]}...")
     print()
     print("Step 1: TwelveLabs processing...")
     
@@ -37,7 +37,7 @@ async def test():
         source_url_for_pack=str(video_path)
     )
     
-    print(f"✅ Video processed: {evidence.video_id}")
+    print(f"Video processed: {evidence.video_id}")
     print(f"   Events: {len(evidence.events)}, Chapters: {len(evidence.chapters)}")
     print()
     print("Step 2: Backboard AI analysis...")
@@ -50,11 +50,11 @@ async def test():
         case_id="SIMPLE-TEST"
     )
     
-    print(f"✅ Analysis complete!")
+    print(f"Analysis complete!")
     print(f"   Score: {report.credibility_score}/100")
     print(f"   Verdict: {report.verdict}")
     print()
-    print("✅ ALL TESTS PASSED!")
+    print("ALL TESTS PASSED!")
     return True
 
 if __name__ == "__main__":

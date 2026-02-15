@@ -290,13 +290,13 @@ Be strict. Mark as true ONLY if video clearly supports the claim."""
     ) -> str:
         """Generate verdict based on score and comparisons."""
         if credibility_score >= 80:
-            return "✅ CLAIM SUPPORTED"
+            return "CLAIM SUPPORTED"
         elif credibility_score >= 60:
-            return "✅ CLAIM SUPPORTED (with minor discrepancy)"
+            return "CLAIM SUPPORTED (with minor discrepancy)"
         elif credibility_score >= 40:
-            return "⚠️ INCONCLUSIVE"
+            return "INCONCLUSIVE"
         else:
-            return "❌ CLAIM CONTRADICTED – LIKELY FALSE REPORT"
+            return "CLAIM CONTRADICTED – LIKELY FALSE REPORT"
     
     async def _generate_recommendation(
         self,

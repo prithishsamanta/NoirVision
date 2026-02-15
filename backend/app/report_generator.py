@@ -141,7 +141,7 @@ class ReportGenerator:
         ]
         
         for comp in report.comparisons:
-            comp_line = f"  ⚖️  {comp.category}: {comp.explanation}"
+            comp_line = f"  {comp.category}: {comp.explanation}"
             wrapped = ReportGenerator._wrap_text(comp_line, 60)
             for line in wrapped:
                 lines.append(f"│  {line:<60}│")

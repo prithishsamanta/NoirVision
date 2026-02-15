@@ -32,7 +32,7 @@ function WorkspacePage() {
     if (!idToken) {
       setIncidentsLoading(false);
       setIncidents([]);
-      console.log('ℹ️  Not authenticated - please log in to view cases');
+      console.log('Not authenticated - please log in to view cases');
       return;
     }
     
@@ -43,7 +43,7 @@ function WorkspacePage() {
     // Create profile if needed, then load incidents
     usersApi.putProfile(idToken)
       .catch((err) => {
-        console.warn('⚠️  Profile creation failed:', err.message);
+        console.warn('Profile creation failed:', err.message);
         return null;
       })
       .then(() => {
@@ -53,11 +53,11 @@ function WorkspacePage() {
       .then((list) => {
         if (cancelled) return;
         setIncidents(Array.isArray(list) ? list : []);
-        console.log('✅ Loaded', list?.length || 0, 'incidents from DynamoDB');
+        console.log('Loaded', list?.length || 0, 'incidents from DynamoDB');
       })
       .catch((e) => {
         if (!cancelled) {
-          console.error('❌ Failed to load incidents:', e.message);
+          console.error('Failed to load incidents:', e.message);
           setIncidentsError(e.message || 'Failed to load cases');
         }
       })
@@ -71,29 +71,29 @@ function WorkspacePage() {
   // Refresh incidents from DynamoDB
   const refreshIncidents = useCallback(() => {
     if (!idToken) {
-      console.log('ℹ️  Not authenticated - cannot refresh');
+      console.log('Not authenticated - cannot refresh');
       return;
     }
     usersApi.listIncidents(idToken)
       .then((list) => {
         setIncidents(Array.isArray(list) ? list : []);
-        console.log('✅ Refreshed', list?.length || 0, 'incidents from DynamoDB');
+        console.log('Refreshed', list?.length || 0, 'incidents from DynamoDB');
       })
-      .catch((err) => console.error('❌ Failed to refresh incidents:', err.message));
+      .catch((err) => console.error('Failed to refresh incidents:', err.message));
   }, [idToken]);
 
   const handleAnalyze = useCallback((result) => {
-    console.log('✅ Analysis complete, displaying results:', result.caseId);
+    console.log('Analysis complete, displaying results:', result.caseId);
     
     // Display results immediately
     setCaseData(result);
     setActiveCaseId(result.caseId);
     
-    console.log('✅ caseData state updated');
+    console.log('caseData state updated');
     
     // Save to DynamoDB (required)
     if (!idToken) {
-      console.error('❌ Not authenticated - cannot save report');
+      console.error('Not authenticated - cannot save report');
       alert('Please log in to save your investigation report');
       return;
     }
@@ -101,11 +101,11 @@ function WorkspacePage() {
     const generatedText = JSON.stringify(result);
     usersApi.updateIncident(idToken, result.caseId, { generated_text: generatedText })
       .then(() => {
-        console.log('✅ Report saved to DynamoDB');
+        console.log('Report saved to DynamoDB');
         refreshIncidents();
       })
       .catch((err) => {
-        console.error('❌ Failed to save report to DynamoDB:', err.message);
+        console.error('Failed to save report to DynamoDB:', err.message);
         alert(`Failed to save report: ${err.message}`);
       });
   }, [idToken, refreshIncidents]);
@@ -120,17 +120,17 @@ function WorkspacePage() {
         if (incident && incident.generated_text) {
           // Parse the stored report
           const storedReport = JSON.parse(incident.generated_text);
-          console.log('✅ Loaded report from DynamoDB:', caseItem.id);
+          console.log('Loaded report from DynamoDB:', caseItem.id);
           setCaseData(storedReport);
           return;
         }
       } catch (err) {
-        console.warn('⚠️  Could not load from DynamoDB:', err.message);
+        console.warn('Could not load from DynamoDB:', err.message);
       }
     }
     
     // Fallback to mock data or local case
-    console.log('ℹ️  Using mock data for case:', caseItem.id);
+    console.log('Using mock data for case:', caseItem.id);
     const base = caseItem.verdict === 'supported' ? MOCK_SUPPORTED_CASE : 
                  (caseItem.verdict === 'contradicted' ? MOCK_CONTRADICTED_CASE : MOCK_SUPPORTED_CASE);
     setCaseData({
@@ -149,14 +149,14 @@ function WorkspacePage() {
   const handleStartAnalysis = useCallback(async ({ title, claim, videoLink }) => {
     // Check authentication first
     if (!idToken) {
-      console.error('❌ Not authenticated - cannot create investigation');
+      console.error('Not authenticated - cannot create investigation');
       alert('Please log in to create an investigation report');
       throw new Error('Authentication required');
     }
     
     // Generate case ID
     const incidentId = `case-${Date.now()}`;
-    console.log('✅ Case ID generated:', incidentId);
+    console.log('Case ID generated:', incidentId);
     
     // Save to DynamoDB
     try {
@@ -167,10 +167,10 @@ function WorkspacePage() {
         video_link: videoLink || '',
         generated_text: '',
       });
-      console.log('✅ Incident created in DynamoDB:', incidentId);
+      console.log('Incident created in DynamoDB:', incidentId);
       refreshIncidents();
     } catch (err) {
-      console.error('❌ Failed to create incident in DynamoDB:', err.message);
+      console.error('Failed to create incident in DynamoDB:', err.message);
       alert(`Failed to create investigation: ${err.message}`);
       throw err;
     }

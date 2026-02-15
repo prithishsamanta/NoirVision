@@ -33,7 +33,7 @@ const sampleResponse = {
             }
         ],
         "credibility_score": 20,
-        "verdict": "❌ CLAIM CONTRADICTED – LIKELY FALSE REPORT",
+        "verdict": "CLAIM CONTRADICTED – LIKELY FALSE REPORT",
         "recommendation": "→ Based on discrepancies...",
         "evidence_summary": {
             "Time Match": {
@@ -113,12 +113,12 @@ function transformBackendResponse(backendResponse) {
   };
 }
 
-console.log('🧪 Testing transformation with actual API response...\n');
+console.log('Testing transformation with actual API response...\n');
 
 const transformed = transformBackendResponse(sampleResponse);
 
-console.log('✅ Transformation complete!\n');
-console.log('📊 Transformed fields check:\n');
+console.log('Transformation complete!\n');
+console.log('Transformed fields check:\n');
 
 const requiredFields = [
   'caseId',
@@ -147,12 +147,12 @@ requiredFields.forEach(field => {
   const isArray = Array.isArray(value);
   const length = isArray ? value.length : (typeof value === 'string' ? value.length : 'N/A');
   
-  console.log(`${exists ? '✅' : '❌'} ${field}: ${exists ? (isArray ? `array[${length}]` : typeof value) : 'MISSING'}`);
+  console.log(`${exists ? 'PASS' : 'FAIL'} ${field}: ${exists ? (isArray ? `array[${length}]` : typeof value) : 'MISSING'}`);
   
   if (!exists) allFieldsPresent = false;
 });
 
-console.log('\n📋 Detailed field values:\n');
+console.log('\nDetailed field values:\n');
 console.log('caseId:', transformed.caseId);
 console.log('verdict:', transformed.verdict);
 console.log('credibilityScore:', transformed.credibilityScore);
@@ -160,22 +160,22 @@ console.log('keyDetections count:', transformed.keyDetections.length);
 console.log('comparisons count:', transformed.comparisons.length);
 console.log('evidenceSummary count:', transformed.evidenceSummary.length);
 
-console.log('\n📄 Sample keyDetection:');
+console.log('\nSample keyDetection:');
 console.log(JSON.stringify(transformed.keyDetections[0], null, 2));
 
-console.log('\n📄 Sample comparison:');
+console.log('\nSample comparison:');
 console.log(JSON.stringify(transformed.comparisons[0], null, 2));
 
-console.log('\n📄 Sample evidenceSummary:');
+console.log('\nSample evidenceSummary:');
 console.log(transformed.evidenceSummary[0]);
 
 if (allFieldsPresent) {
-  console.log('\n✅ ALL REQUIRED FIELDS PRESENT!');
-  console.log('✅ Transformation is working correctly!');
-  console.log('✅ Frontend should render without issues!');
+  console.log('\nALL REQUIRED FIELDS PRESENT!');
+  console.log('Transformation is working correctly!');
+  console.log('Frontend should render without issues!');
 } else {
-  console.log('\n❌ SOME FIELDS MISSING!');
-  console.log('❌ This will cause rendering errors!');
+  console.log('\nSOME FIELDS MISSING!');
+  console.log('This will cause rendering errors!');
 }
 
-console.log('\n🎯 Ready for frontend rendering!');
+console.log('\nReady for frontend rendering!');

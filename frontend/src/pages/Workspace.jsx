@@ -56,7 +56,7 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
                 videoLink: ''
             });
             
-            console.log('✅ Case ID:', caseId);
+            console.log('Case ID:', caseId);
 
             // Step 2: Upload and analyze with backend
             setAnalysisProgress('Uploading video...');
@@ -71,9 +71,9 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
             setAnalysisProgress('Analyzing credibility with AI...');
 
             // Step 3: Transform response to frontend format
-            console.log('✅ Backend response received:', response);
+            console.log('Backend response received:', response);
             const transformedData = transformBackendResponse(response);
-            console.log('✅ Transformed data:', transformedData);
+            console.log('Transformed data:', transformedData);
             
             // Step 4: Pass to parent component to display
             onAnalyze({
@@ -82,7 +82,7 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
                 caseTitle: title.trim()
             });
             
-            console.log('✅ Analysis complete - should display now!');
+            console.log('Analysis complete - should display now!');
 
             // Reset form
             setTitle('');
@@ -91,7 +91,7 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
             setVideoFile(null);
             
         } catch (err) {
-            console.error('❌ Analysis failed:', err);
+            console.error('Analysis failed:', err);
             setError(err.message || 'Analysis failed. Please try again.');
         } finally {
             setIsAnalyzing(false);
@@ -258,7 +258,6 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
                         <div style={{ paddingLeft: '8px' }}>
                             {caseData.comparisons.map((comp, i) => (
                                 <div key={i} className="flex gap-3 mb-4 items-start">
-                                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚖️</span>
                                     <span style={{ fontFamily: 'var(--font-typewriter)', fontSize: '0.84rem', color: 'var(--color-noir-100)', lineHeight: 1.5 }}>
                                         <span style={{ fontWeight: 600, color: 'var(--color-noir-100)' }}>{comp.label}: </span>
                                         <span style={{
@@ -311,7 +310,6 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
 
                         {/* Status */}
                         <div className="flex items-center gap-3 mb-6">
-                            <span style={{ fontSize: '1.1rem' }}>{isSupported ? '✅' : '❌'}</span>
                             <span style={{
                                 fontFamily: 'var(--font-typewriter)',
                                 fontSize: '0.9rem',
@@ -585,7 +583,7 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
                                 fontFamily: 'var(--font-mono)',
                                 color: 'var(--color-verdict-red-light)',
                             }}>
-                                ⚠️ {error}
+                                {error}
                             </p>
                         </div>
                     )}

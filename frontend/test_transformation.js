@@ -49,7 +49,7 @@ const backendResponse = {
             }
         ],
         "credibility_score": 40,
-        "verdict": "⚠️ INCONCLUSIVE",
+        "verdict": "INCONCLUSIVE",
         "recommendation": "→ Proceed with caution. The witness claim is inconclusive due to mismatches in time, location, and suspect description.",
         "evidence_summary": {
             "Time Match": {
@@ -135,12 +135,12 @@ function transformBackendResponse(backendResponse) {
 }
 
 // Run test
-console.log('🧪 Testing transformation...\n');
+console.log('Testing transformation...\n');
 
 const transformed = transformBackendResponse(backendResponse);
 
-console.log('✅ Transformation successful!\n');
-console.log('📊 Transformed data structure:\n');
+console.log('Transformation successful!\n');
+console.log('Transformed data structure:\n');
 console.log('caseId:', transformed.caseId);
 console.log('caseTitle:', transformed.caseTitle);
 console.log('verdict:', transformed.verdict);
@@ -154,12 +154,12 @@ console.log('First comparison:', JSON.stringify(transformed.comparisons[0], null
 console.log('\nevidenceSummary:', transformed.evidenceSummary.length, 'items');
 console.log('First summary item:', transformed.evidenceSummary[0]);
 
-console.log('\n✅ All fields correctly transformed!');
-console.log('\n📌 Key fixes:');
-console.log('  - comparisons[].category → comparisons[].label ✅');
-console.log('  - comparisons[].explanation → comparisons[].detail ✅');
-console.log('  - video_analysis.detections → keyDetections ✅');
-console.log('  - evidence_summary (object) → evidenceSummary (array) ✅');
-console.log('  - Default values added for null fields ✅');
+console.log('\nAll fields correctly transformed!');
+console.log('\nKey fixes:');
+console.log('  - comparisons[].category → comparisons[].label');
+console.log('  - comparisons[].explanation → comparisons[].detail');
+console.log('  - video_analysis.detections → keyDetections');
+console.log('  - evidence_summary (object) → evidenceSummary (array)');
+console.log('  - Default values added for null fields');
 
-console.log('\n🎯 Frontend should now render without errors!');
+console.log('\nFrontend should now render without errors!');

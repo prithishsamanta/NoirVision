@@ -20,7 +20,7 @@ cd "$(dirname "$0")"
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
-    echo -e "${RED}❌ Virtual environment not found!${NC}"
+    echo -e "${RED}Virtual environment not found!${NC}"
     echo "Run: python -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
     exit 1
 fi
@@ -30,7 +30,7 @@ source venv/bin/activate
 
 # Check if .env file exists
 if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}⚠️  .env file not found. Using .env.example as template${NC}"
+    echo -e "${YELLOW}.env file not found. Using .env.example as template${NC}"
     if [ -f ".env.example" ]; then
         cp .env.example .env
         echo "Please edit .env with your API keys"
@@ -47,7 +47,7 @@ if [ ! -z "$EXISTING_PID" ]; then
 fi
 
 # Start the server
-echo -e "${GREEN}✅ Starting NoirVision server...${NC}"
+echo -e "${GREEN}Starting NoirVision server...${NC}"
 echo ""
 echo "Server will be available at: http://0.0.0.0:8000"
 echo "Press Ctrl+C to stop"

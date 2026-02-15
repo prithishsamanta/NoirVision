@@ -69,7 +69,7 @@ app.add_middleware(
 try:
     analyzer = BackboardAnalyzer()
     noirvision = NoirVisionAnalyzer()
-    logger.info("✅ NoirVision analyzer initialized with Backboard AI")
+    logger.info("NoirVision analyzer initialized with Backboard AI")
 except ValueError as e:
     logger.error(f"Failed to initialize: {e}")
     analyzer = None
@@ -167,7 +167,7 @@ async def analyze_complete(
                 source_url_for_pack=video_url
             )
         
-        logger.info("✅ TwelveLabs analysis complete, video_id=%s", evidence.video_id)
+        logger.info("TwelveLabs analysis complete, video_id=%s", evidence.video_id)
         
         # Step 2: Analyze with Backboard AI
         logger.info("Starting Backboard AI credibility analysis...")
@@ -180,7 +180,7 @@ async def analyze_complete(
         # Step 3: Generate formatted report
         formatted_report = noirvision.generate_formatted_report(report)
         
-        logger.info("✅ Complete analysis done, case_id=%s, score=%d", 
+        logger.info("Complete analysis done, case_id=%s, score=%d", 
                    report.case_id, report.credibility_score)
         
         return {
