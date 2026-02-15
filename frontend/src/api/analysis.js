@@ -70,10 +70,27 @@ export function transformBackendResponse(backendResponse) {
   
   // Transform comparisons to frontend format
   const comparisons = report.comparisons.map(comp => ({
-    category: comp.category,
+    label: comp.category,
     match: comp.match,
-    explanation: comp.explanation
+    detail: comp.explanation
   }));
+  
+  // Transform detections to keyDetections format for frontend
+  const keyDetections = (report.video_analysis.detections || []).map(det => ({
+    time: det.timestamp,
+    event: det.description,
+    details: det.objects ? det.objects.join(', ') : null,
+    confidence: det.confidence
+  }));
+  
+  // Transform evidence summary to match frontend expectations (array of strings)
+  const evidenceSummary = [];
+  if (report.evidence_summary) {
+    Object.entries(report.evidence_summary).forEach(([key, value]) => {
+      const icon = value.match ? '✓' : '✗';
+      evidenceSummary.push(`${key}: ${icon} ${value.detail}`);
+    });
+  }
   
   return {
     caseId: report.case_id,
@@ -84,16 +101,17 @@ export function transformBackendResponse(backendResponse) {
     // Video analysis data
     videoSource: report.video_analysis.source,
     videoDuration: report.video_analysis.duration,
-    detections: report.video_analysis.detections,
-    onScreenText: report.video_analysis.on_screen_text,
-    speechTranscription: report.video_analysis.speech_transcription,
+    keyDetections: keyDetections,
+    onScreenText: report.video_analysis.on_screen_text || 'None detected',
+    gpsMetadata: report.video_analysis.gps_metadata || 'Not available',
+    speechTranscription: report.video_analysis.speech_transcription || [],
     
     // Analysis results
     verdict: verdict,
     credibilityScore: report.credibility_score,
     comparisons: comparisons,
     recommendation: report.recommendation,
-    evidenceSummary: report.evidence_summary,
+    evidenceSummary: evidenceSummary,
     detectiveNote: report.detective_note,
     
     // Formatted report (ASCII art)

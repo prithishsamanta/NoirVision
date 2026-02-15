@@ -46,29 +46,43 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
 
         setIsAnalyzing(true);
         setError(null);
-        setAnalysisProgress('Uploading video...');
+        setAnalysisProgress('Creating case...');
 
         try {
-            // Step 1: Upload and analyze with backend
+            // Step 1: Create case ID
+            const caseId = await onStartAnalysis({
+                title: title.trim(),
+                claim: claim.trim(),
+                videoLink: ''
+            });
+            
+            console.log('✅ Case ID:', caseId);
+
+            // Step 2: Upload and analyze with backend
+            setAnalysisProgress('Uploading video...');
             setAnalysisProgress('Processing video with TwelveLabs...');
             
             const response = await analyzeComplete({
                 claim: claim.trim(),
                 videoFile: videoFile,
-                caseId: `case-${Date.now()}`
+                caseId: caseId
             });
 
             setAnalysisProgress('Analyzing credibility with AI...');
 
-            // Step 2: Transform response to frontend format
+            // Step 3: Transform response to frontend format
+            console.log('✅ Backend response received:', response);
             const transformedData = transformBackendResponse(response);
+            console.log('✅ Transformed data:', transformedData);
             
-            // Step 3: Pass to parent component
+            // Step 4: Pass to parent component to display
             onAnalyze({
                 ...transformedData,
                 claim: claim.trim(),
                 caseTitle: title.trim()
             });
+            
+            console.log('✅ Analysis complete - should display now!');
 
             // Reset form
             setTitle('');
@@ -77,7 +91,7 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
             setVideoFile(null);
             
         } catch (err) {
-            console.error('Analysis failed:', err);
+            console.error('❌ Analysis failed:', err);
             setError(err.message || 'Analysis failed. Please try again.');
         } finally {
             setIsAnalyzing(false);
@@ -314,17 +328,15 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
                             INVESTIGATION RECOMMENDATION:
                         </p>
                         <div style={{ paddingLeft: '12px' }}>
-                            {caseData.recommendations.map((rec, i) => (
-                                <p key={i} style={{
-                                    fontFamily: 'var(--font-typewriter)',
-                                    fontSize: '0.84rem',
-                                    color: 'var(--color-noir-200)',
-                                    lineHeight: 1.7,
-                                    marginBottom: '10px',
-                                }}>
-                                    → {rec}
-                                </p>
-                            ))}
+                            <p style={{
+                                fontFamily: 'var(--font-typewriter)',
+                                fontSize: '0.84rem',
+                                color: 'var(--color-noir-200)',
+                                lineHeight: 1.7,
+                                marginBottom: '10px',
+                            }}>
+                                → {caseData.recommendation}
+                            </p>
                         </div>
                     </ReportSection>
 
