@@ -2,7 +2,7 @@
 Mock TwelveLabs data for testing.
 This module simulates video analysis responses until TwelveLabs integration is ready.
 """
-from app.models_twelvelabs.backboard import VideoAnalysis, VideoDetection
+from app.models import VideoAnalysis, VideoDetection
 
 
 def get_mock_video_analysis_supported() -> VideoAnalysis:

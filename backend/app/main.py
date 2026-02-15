@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from app.models_twelvelabs.backboard import AnalysisRequest, WitnessClaim, CredibilityReport
+from app.models import AnalysisRequest, WitnessClaim, CredibilityReport
 from app.backboard_agent import BackboardAnalyzer
 from app.report_generator import ReportGenerator
 from app.mock_data import (

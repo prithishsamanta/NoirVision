@@ -2,7 +2,7 @@
 ASCII Art Report Generator for NoirVision.
 Generates beautiful noir-styled credibility reports.
 """
-from app.models_twelvelabs.backboard import CredibilityReport
+from app.models import CredibilityReport
 
 
 class ReportGenerator:
