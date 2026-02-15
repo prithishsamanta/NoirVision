@@ -12,7 +12,7 @@ import uuid
 from sqlmodel import Session, SQLModel, create_engine, Field as SqlField
 
 from app.config import get_settings
-from app.models.jobs import JobStatus
+from app.models_twelvelabs.jobs import JobStatus
 
 
 class Job(SQLModel, table=True):

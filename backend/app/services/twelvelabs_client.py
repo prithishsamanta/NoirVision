@@ -209,32 +209,48 @@ def _summarize(video_id: str, type_: str, prompt: Optional[str] = None) -> dict[
 
 def fetch_transcript(video_id: str) -> str:
     """
-    Fetch transcript for video. Uses generate endpoint with a transcript-style prompt.
+    Fetch transcript for video. Uses analyze endpoint with a transcript-style prompt.
     Returns empty string if endpoint not available or on error.
     """
     settings = get_settings()
     if settings.twelvelabs_mock:
         return "Mock transcript for demo. This is a placeholder."
 
-    # Try generate endpoint; some plans may not support it
-    url = _base_url() + "/generate"
+    # Use the /analyze endpoint for open-ended text generation
+    url = _base_url() + "/analyze"
     payload = {
         "video_id": video_id,
-        "prompt": "Provide a full transcript of all spoken words in this video, with minimal commentary.",
+        "prompt": "Provide a detailed transcript of all spoken words and dialogue in this video, with speaker identification if possible. Include timestamps where applicable.",
+        "temperature": 0.2,
+        "stream": False,
     }
     try:
         with httpx.Client(timeout=120.0) as client:
             resp = client.post(url, json=payload, headers=_headers())
         if resp.status_code != 200:
-            logger.warning("Generate (transcript) returned %s: %s", resp.status_code, resp.text)
+            logger.warning("Analyze (transcript) returned %s: %s", resp.status_code, resp.text)
             return ""
         data = resp.json()
-        # Response shape may be { "text": "..." } or similar
+        
+        # Response format from TwelveLabs: { "id": "...", "data": "text content", "finish_reason": "...", "usage": {...} }
         if isinstance(data, str):
             return data
-        return data.get("text") or data.get("generated_text") or data.get("output") or ""
+        
+        if not isinstance(data, dict):
+            logger.warning("Unexpected response format: %s", type(data))
+            return ""
+        
+        # The 'data' field contains the generated text
+        transcript = data.get("data", "")
+        if isinstance(transcript, str):
+            return transcript
+        
+        # Fallback: try other possible fields
+        return data.get("text", "") or data.get("output", "") or data.get("response", "")
     except Exception as e:
         logger.warning("Failed to fetch transcript for %s: %s", video_id, e)
+        import traceback
+        logger.debug("Traceback: %s", traceback.format_exc())
         return ""
 
 
