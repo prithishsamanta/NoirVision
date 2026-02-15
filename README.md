@@ -2,6 +2,8 @@
 
 **Forensic video analysis and credibility reporting for law enforcement**
 
+# NoirVision is an AI-powered video claim verification system that analyzes real-world video evidence, extracts key events, and evaluates whether a user-provided claim is supported, contradicted, or unverifiable. Misinformation doesn’t only come from deepfakes, it often arises from misleading interpretations of authentic crime footage. Manually reviewing hours of video is slow and resource-intensive for investigators. NoirVision bridges this gap by automatically surfacing relevant moments and providing clear claim validation, enabling law enforcement to focus on the evidence that matters most.
+
 ---
 
 ## Overview
