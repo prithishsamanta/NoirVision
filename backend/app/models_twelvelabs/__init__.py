@@ -5,7 +5,7 @@ from .evidence import (
     EvidenceEvent,
     EvidenceKeyQuote,
 )
-from .jobs import JobStatus, JobCreate, JobRecord, JobStatusResponse, AnalyzeRequest
+from .jobs import JobStatus, JobRecord, JobStatusResponse, AnalyzeRequest
 
 __all__ = [
     "EvidencePack",
@@ -14,7 +14,6 @@ __all__ = [
     "EvidenceEvent",
     "EvidenceKeyQuote",
     "JobStatus",
-    "JobCreate",
     "JobRecord",
     "JobStatusResponse",
     "AnalyzeRequest",

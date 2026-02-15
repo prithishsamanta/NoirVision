@@ -15,8 +15,8 @@ from app.db import (
     get_job_by_video_id,
     update_job_status,
 )
-from app.models.evidence import EvidencePack
-from app.models.jobs import (
+from app.models_twelvelabs.evidence import EvidencePack
+from app.models_twelvelabs.jobs import (
     AnalyzeRequest,
     JobStatus,
     JobStatusResponse,

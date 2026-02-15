@@ -13,7 +13,7 @@ from typing import Any, Optional
 import httpx
 
 from app.config import get_settings
-from app.models.evidence import (
+from app.models_twelvelabs.evidence import (
     EvidencePack,
     EvidencePackSource,
     EvidenceChapter,
