@@ -1,4 +1,4 @@
-# NoirVision backend - TwelveLabs pipeline
+# NoirVision backend - TwelveLabs pipeline + Backboard.io
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
@@ -9,3 +9,4 @@ boto3>=1.34.0
 sqlmodel>=0.0.14
 python-multipart>=0.0.6
 PyJWT[crypto]>=2.8.0
+backboard-sdk>=1.4.0

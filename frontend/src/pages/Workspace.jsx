@@ -75,11 +75,12 @@ export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
             const transformedData = transformBackendResponse(response);
             console.log('✅ Transformed data:', transformedData);
             
-            // Step 4: Pass to parent component to display
+            // Step 4: Pass to parent to display and persist (backendResponse saved to DynamoDB as generated_text)
             onAnalyze({
                 ...transformedData,
                 claim: claim.trim(),
-                caseTitle: title.trim()
+                caseTitle: title.trim(),
+                backendResponse: response
             });
             
             console.log('✅ Analysis complete - should display now!');

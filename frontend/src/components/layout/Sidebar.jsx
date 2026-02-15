@@ -1,10 +1,10 @@
 export default function Sidebar({ cases = [], loading, error, onSelectCase, activeCaseId, onNewCase }) {
     const caseList = cases.map((inc) => ({
-        id: inc.incident_id,
-        title: inc.incident_name,
-        date: (inc.created_at || '').slice(0, 10),
-        description: inc.description || '',
-        verdict: inc.generated_text ? 'supported' : 'pending',
+        id: inc.id ?? inc.incident_id,
+        title: inc.title ?? inc.incident_name,
+        date: inc.date ?? (inc.created_at || '').slice(0, 10),
+        description: inc.description ?? '',
+        verdict: inc.verdict ?? (inc.generated_text ? 'supported' : 'pending'),
     }));
 
     return (

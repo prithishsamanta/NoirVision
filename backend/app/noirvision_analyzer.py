@@ -3,7 +3,7 @@ Complete integration of TwelveLabs video analysis with Backboard AI claim verifi
 This module bridges TwelveLabs EvidencePack with Backboard credibility analysis.
 """
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.models_twelvelabs.evidence import EvidencePack
 from app.models import VideoAnalysis, VideoDetection, WitnessClaim, CredibilityReport
 from app.backboard_agent import BackboardAnalyzer
@@ -17,8 +17,8 @@ class NoirVisionAnalyzer:
     Complete end-to-end analyzer that integrates TwelveLabs and Backboard.
     """
     
-    def __init__(self):
-        self.backboard = BackboardAnalyzer()
+    def __init__(self, backboard: Optional[BackboardAnalyzer] = None):
+        self.backboard = backboard or BackboardAnalyzer()
     
     def convert_evidence_to_video_analysis(self, evidence: EvidencePack) -> VideoAnalysis:
         """

@@ -28,44 +28,59 @@ function WorkspacePage() {
   const [incidentsLoading, setIncidentsLoading] = useState(true);
   const [incidentsError, setIncidentsError] = useState(null);
 
-  // Simplified: No database loading, just use local storage
+  // When authenticated: ensure profile exists and load incidents from DynamoDB
   useEffect(() => {
-    setIncidentsLoading(false);
-    setIncidents([]);
-    console.log('ℹ️  Using local storage only (simplified mode)');
-  }, []);
+    if (!idToken) {
+      setIncidentsLoading(false);
+      setIncidents([]);
+      return;
+    }
+    let cancelled = false;
+    setIncidentsLoading(true);
+    setIncidentsError(null);
+    usersApi.putProfile(idToken).catch(() => {}).then(() => {
+      if (cancelled) return;
+      return usersApi.listIncidents(idToken);
+    }).then((list) => {
+      if (cancelled) return;
+      setIncidents(Array.isArray(list) ? list : []);
+    }).catch((e) => {
+      if (!cancelled) setIncidentsError(e.message || 'Failed to load cases');
+    }).finally(() => {
+      if (!cancelled) setIncidentsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [idToken]);
 
-  // Simplified: No database refresh needed
   const refreshIncidents = useCallback(() => {
-    console.log('ℹ️  Using local storage (no database refresh needed)');
-  }, []);
+    if (!idToken) return;
+    usersApi.listIncidents(idToken).then(setIncidents).catch(() => {});
+  }, [idToken]);
 
   const handleAnalyze = useCallback((result) => {
-    console.log('✅ handleAnalyze called with result:', result);
-    console.log('✅ result.caseId:', result.caseId);
-    console.log('✅ result.keyDetections:', result.keyDetections);
-    console.log('✅ result.comparisons:', result.comparisons);
-    
-    // Display results immediately
     setCaseData(result);
     setActiveCaseId(result.caseId);
-    
-    console.log('✅ caseData state updated');
-    
-    // Save to local storage (simple and reliable)
+
     const localCase = {
       id: result.caseId,
       title: result.caseTitle,
       description: result.claim,
       verdict: result.verdict,
       score: result.credibilityScore,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    setLocalCases(prev => [localCase, ...prev].slice(0, 10));
-    console.log('✅ Case saved locally');
-    
-    // No database operations - keep it simple!
-  }, []);
+    setLocalCases((prev) => [localCase, ...prev].slice(0, 10));
+
+    // When authenticated: update DynamoDB incident with backboard output (generated_text)
+    if (idToken && result.caseId && result.backendResponse != null) {
+      const generatedText = typeof result.backendResponse === 'string'
+        ? result.backendResponse
+        : JSON.stringify(result.backendResponse);
+      usersApi.updateIncident(idToken, result.caseId, { generated_text: generatedText }).then(() => {
+        refreshIncidents();
+      }).catch((err) => console.error('Failed to update incident with report', err));
+    }
+  }, [idToken, refreshIncidents]);
 
   const handleSelectCase = useCallback((caseItem) => {
     setActiveCaseId(caseItem.id);
@@ -84,20 +99,29 @@ function WorkspacePage() {
   }, []);
 
   const handleStartAnalysis = useCallback(async ({ title, claim, videoLink }) => {
-    // Simple: just generate and return a case ID
-    const incidentId = `case-${Date.now()}`;
-    console.log('✅ Case ID generated:', incidentId);
-    return incidentId;
-  }, []);
+    if (idToken) {
+      const incidentId = generateIncidentId();
+      await usersApi.createIncident(idToken, {
+        incident_id: incidentId,
+        incident_name: title,
+        description: claim || '',
+        video_link: videoLink || '',
+        generated_text: '',
+      });
+      refreshIncidents();
+      return incidentId;
+    }
+    return `case-${Date.now()}`;
+  }, [idToken, refreshIncidents]);
 
   return (
     <div className="app-shell">
       <Topbar />
       <div className="app-body">
         <Sidebar
-          cases={localCases}
-          loading={false}
-          error={null}
+          cases={idToken ? incidents : localCases}
+          loading={idToken ? incidentsLoading : false}
+          error={idToken ? incidentsError : null}
           onSelectCase={handleSelectCase}
           activeCaseId={activeCaseId}
           onNewCase={handleNewCase}

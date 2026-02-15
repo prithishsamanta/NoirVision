@@ -98,13 +98,19 @@ class Settings(BaseSettings):
         description="Cognito App client ID (optional; used to validate id_token aud)",
     )
 
-    @field_validator("cognito_user_pool_id", "cognito_region", mode="before")
+    # Backboard.io – for /analyze/complete credibility analysis
+    backboard_api_key: Optional[str] = Field(
+        default=None,
+        description="Backboard.io API key (required for NoirVision analyzer)",
+    )
+
+    @field_validator("cognito_user_pool_id", "cognito_region", "backboard_api_key", mode="before")
     @classmethod
-    def cognito_from_env(cls, v, info):
+    def from_env(cls, v, info):
         # Fallback: read from os.environ if .env wasn't loaded (e.g. wrong cwd)
         if v is not None and str(v).strip():
             return v.strip()
-        env_name = info.field_name.upper()  # cognito_user_pool_id -> COGNITO_USER_POOL_ID
+        env_name = info.field_name.upper().replace("_", "_")  # backboard_api_key -> BACKBOARD_API_KEY
         return (os.getenv(env_name) or "").strip() or (v or "")
 
     @field_validator("twelvelabs_api_key", mode="before")
