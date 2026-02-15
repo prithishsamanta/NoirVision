@@ -7,22 +7,27 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+from pathlib import Path
+from typing import Optional
 
-from app.models import AnalysisRequest, WitnessClaim, CredibilityReport
+from app.models import WitnessClaim, CredibilityReport
 from app.backboard_agent import BackboardAnalyzer
 from app.report_generator import ReportGenerator
-from app.mock_data import (
-    get_mock_video_analysis_supported,
-    get_mock_video_analysis_contradicted,
-    MOCK_CLAIM_SUPPORTED,
-    MOCK_CLAIM_CONTRADICTED
-)
+from app.noirvision_analyzer import NoirVisionAnalyzer
+from app.services.twelvelabs_client import run_analysis
+# Temporarily commented out - not needed for core analysis
+# from app.mock_data import (
+#     get_mock_video_analysis_supported,
+#     get_mock_video_analysis_contradicted,
+#     MOCK_CLAIM_SUPPORTED,
+#     MOCK_CLAIM_CONTRADICTED
+# )
 from app.config import get_settings
-from app.routers import users, videos
+# from app.routers import users, videos  # Temporarily disabled
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,17 +69,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Backboard analyzer (will need API key)
+# Initialize analyzers
 try:
     analyzer = BackboardAnalyzer()
+    noirvision = NoirVisionAnalyzer()
+    logger.info("✅ NoirVision analyzer initialized with Backboard AI")
 except ValueError as e:
-    print(f"Warning: {e}")
-    print("Backboard analyzer not initialized. Set BACKBOARD_API_KEY in .env")
+    logger.error(f"Failed to initialize: {e}")
     analyzer = None
+    noirvision = None
 
-# Include routers
-app.include_router(videos.router)
-app.include_router(users.router)
+# Include routers (temporarily disabled for core functionality)
+# app.include_router(videos.router)
+# app.include_router(users.router)
 
 
 @app.get("/")
@@ -156,6 +163,7 @@ async def analyze_text_only(claim_text: str):
     
     try:
         # Determine which mock video to use based on claim
+        from app.mock_data import get_mock_video_analysis_supported, get_mock_video_analysis_contradicted
         if "blue note" in claim_text.lower() or "jazz club" in claim_text.lower():
             video_analysis = get_mock_video_analysis_contradicted()
         else:
@@ -185,66 +193,100 @@ async def analyze_text_only(claim_text: str):
         )
 
 
-@app.get("/demo/supported")
-async def demo_supported():
+@app.post("/analyze/complete")
+async def analyze_complete(
+    claim: str = Form(..., description="Witness claim/statement"),
+    video_url: Optional[str] = Form(None, description="YouTube or public video URL"),
+    video_file: Optional[UploadFile] = File(None, description="Video file upload"),
+    case_id: Optional[str] = Form(None, description="Optional case ID")
+):
     """
-    Demo endpoint: Shows a SUPPORTED claim scenario.
+    Complete end-to-end analysis: Video → TwelveLabs → Backboard → Credibility Report.
+    
+    Provide EITHER video_url OR video_file (not both).
+    
+    Args:
+        claim: Witness statement text
+        video_url: YouTube URL or public video URL
+        video_file: Uploaded video file
+        case_id: Optional case identifier
+        
+    Returns:
+        Complete credibility report with formatted ASCII output
     """
-    if not analyzer:
+    if not noirvision:
         raise HTTPException(
             status_code=500,
-            detail="Backboard analyzer not configured. Set BACKBOARD_API_KEY in environment."
+            detail="NoirVision analyzer not initialized. Check BACKBOARD_API_KEY."
+        )
+    
+    if not video_url and not video_file:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either video_url or video_file"
+        )
+    
+    if video_url and video_file:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide only one: video_url OR video_file, not both"
         )
     
     try:
-        claim = WitnessClaim(claim_text=MOCK_CLAIM_SUPPORTED)
-        video_analysis = get_mock_video_analysis_supported()
+        logger.info("Starting complete analysis for claim: %s...", claim[:50])
         
-        report = await analyzer.analyze_claim_vs_video(claim, video_analysis)
-        formatted_report = ReportGenerator.generate_report(report)
+        # Step 1: Process video with TwelveLabs
+        if video_file:
+            # Save uploaded file temporarily
+            temp_path = Path(f"/tmp/noirvision_{video_file.filename}")
+            with open(temp_path, "wb") as f:
+                f.write(await video_file.read())
+            
+            logger.info("Processing uploaded video: %s", video_file.filename)
+            evidence = run_analysis(
+                video_file_path=str(temp_path),
+                source_type="s3",
+                source_url_for_pack=video_file.filename
+            )
+            
+            # Cleanup
+            temp_path.unlink(missing_ok=True)
+        else:
+            logger.info("Processing video URL: %s", video_url)
+            source_type = "youtube" if "youtube.com" in video_url or "youtu.be" in video_url else "youtube"
+            evidence = run_analysis(
+                video_url=video_url,
+                source_type=source_type,
+                source_url_for_pack=video_url
+            )
+        
+        logger.info("✅ TwelveLabs analysis complete, video_id=%s", evidence.video_id)
+        
+        # Step 2: Analyze with Backboard AI
+        logger.info("Starting Backboard AI credibility analysis...")
+        report = await noirvision.analyze_video_with_claim(
+            evidence=evidence,
+            claim_text=claim,
+            case_id=case_id
+        )
+        
+        # Step 3: Generate formatted report
+        formatted_report = noirvision.generate_formatted_report(report)
+        
+        logger.info("✅ Complete analysis done, case_id=%s, score=%d", 
+                   report.case_id, report.credibility_score)
         
         return {
             "report": report.model_dump(),
-            "formatted_report": formatted_report
+            "formatted_report": formatted_report,
+            "video_id": evidence.video_id
         }
     
     except Exception as e:
-        print(f"ERROR in demo_supported: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Analysis failed: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Demo failed: {str(e)}"
-        )
-
-
-@app.get("/demo/contradicted")
-async def demo_contradicted():
-    """
-    Demo endpoint: Shows a CONTRADICTED claim scenario.
-    """
-    if not analyzer:
-        raise HTTPException(
-            status_code=500,
-            detail="Backboard analyzer not configured. Set BACKBOARD_API_KEY in environment."
-        )
-    
-    try:
-        claim = WitnessClaim(claim_text=MOCK_CLAIM_CONTRADICTED)
-        video_analysis = get_mock_video_analysis_contradicted()
-        
-        report = await analyzer.analyze_claim_vs_video(claim, video_analysis)
-        formatted_report = ReportGenerator.generate_report(report)
-        
-        return {
-            "report": report.model_dump(),
-            "formatted_report": formatted_report
-        }
-    
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Demo failed: {str(e)}"
+            detail=f"Analysis failed: {str(e)}"
         )
 
 
