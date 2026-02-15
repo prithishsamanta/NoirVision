@@ -11,7 +11,6 @@ NoirVision is a complete video analysis platform that combines:
 - **Backboard AI** for credibility analysis
 - **AWS Cognito** for authentication
 - **DynamoDB** for user data storage
-- **S3** for evidence storage
 
 ---
 
@@ -20,7 +19,7 @@ NoirVision is a complete video analysis platform that combines:
 ### Prerequisites
 - Python 3.13+
 - Node.js 18+
-- AWS Account (for Cognito, DynamoDB, S3)
+- AWS Account (for Cognito, DynamoDB)
 - TwelveLabs API Key
 - Backboard.io API Key
 
@@ -123,15 +122,6 @@ Display results to user
 - **Schema:** PK=user_id (Cognito sub), SK=PROFILE|INCIDENT#id
 - **Stores:** User profiles and incident records
 
-### SQLite - Job Tracking
-- **File:** `noirvision_jobs.db`
-- **Stores:** Video analysis job status and metadata
-
-### S3 - Evidence Storage
-- **Bucket:** Configured in .env
-- **Path:** `projects/{project_id}/videos/{video_id}/evidence.json`
-- **Stores:** Complete evidence packs from TwelveLabs
-
 ---
 
 ## Authentication
@@ -216,7 +206,6 @@ curl -X POST http://localhost:8000/analyze/complete \
 **Request:**
 - `claim` (form): Witness statement text
 - `video_file` (file): Video file OR
-- `video_url` (form): YouTube/public video URL
 - `case_id` (form, optional): Case identifier
 
 **Response:**
@@ -227,7 +216,7 @@ curl -X POST http://localhost:8000/analyze/complete \
     "case_title": "...",
     "witness_claim": "...",
     "credibility_score": 80,
-    "verdict": "✅ CLAIM SUPPORTED",
+    "verdict": "CLAIM SUPPORTED",
     "comparisons": [...],
     "recommendation": "...",
     "evidence_summary": [...],
