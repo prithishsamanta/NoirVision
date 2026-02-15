@@ -131,7 +131,7 @@ async def analyze_complete(
             logger.info("Processing uploaded video: %s", video_file.filename)
             evidence = run_analysis(
                 video_file_path=str(temp_path),
-                source_type="upload",
+                source_type="s3",
                 source_url_for_pack=video_file.filename
             )
             
