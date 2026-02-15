@@ -60,6 +60,13 @@ npm run dev
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 
+### Documentation
+
+- [DOCKER.md](DOCKER.md) – Docker setup and usage
+- [DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md) – Quick Docker start
+- [DOCKER_START_GUIDE.md](DOCKER_START_GUIDE.md) – Detailed Docker guide
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) – Common issues and fixes
+
 ---
 
 ## Architecture
