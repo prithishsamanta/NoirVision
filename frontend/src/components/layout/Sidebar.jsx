@@ -1,11 +1,31 @@
 export default function Sidebar({ cases = [], loading, error, onSelectCase, activeCaseId, onNewCase }) {
-    const caseList = cases.map((inc) => ({
-        id: inc.incident_id,
-        title: inc.incident_name,
-        date: (inc.created_at || '').slice(0, 10),
-        description: inc.description || '',
-        verdict: inc.generated_text ? 'supported' : 'pending',
-    }));
+    // Normalize cases from DynamoDB format
+    const caseList = cases.map((inc) => {
+        const id = inc.incident_id;
+        const title = inc.incident_name;
+        const description = inc.description || '';
+        const createdAt = inc.created_at || '';
+        const generatedText = inc.generated_text || '';
+        
+        // Determine verdict from generated_text
+        let verdict = 'pending';
+        if (generatedText) {
+            try {
+                const parsed = JSON.parse(generatedText);
+                verdict = parsed.verdict || 'pending';
+            } catch {
+                verdict = 'supported'; // Has report = completed
+            }
+        }
+        
+        return {
+            id: id,
+            title: title,
+            date: createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
+            description: description,
+            verdict: verdict,
+        };
+    });
 
     return (
         <aside className="w-[300px] shrink-0 flex flex-col h-full"
@@ -90,14 +110,6 @@ export default function Sidebar({ cases = [], loading, error, onSelectCase, acti
                                 <span className="text-xs tracking-wide"
                                     style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-gold-400)' }}>
                                     {caseItem.id}
-                                </span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded tracking-wide font-bold"
-                                    style={{
-                                        backgroundColor: isPending ? 'var(--color-noir-600)' : (isContradicted ? 'var(--color-verdict-red-glow)' : 'var(--color-verdict-green-glow)'),
-                                        color: isPending ? 'var(--color-noir-300)' : (isContradicted ? 'var(--color-verdict-red-light)' : 'var(--color-verdict-green-light)'),
-                                        fontFamily: 'var(--font-mono)',
-                                    }}>
-                                    {isPending ? 'PEND' : (isContradicted ? 'REJ' : 'VER')}
                                 </span>
                             </div>
 

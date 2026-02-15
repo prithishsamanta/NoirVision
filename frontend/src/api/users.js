@@ -4,7 +4,7 @@
  */
 
 const getBaseUrl = () =>
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:8000';
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://localhost:8000';
 
 function authHeaders(idToken) {
   if (!idToken) throw new Error('id_token required');
@@ -85,17 +85,26 @@ export async function getIncident(idToken, incidentId) {
  * @param {{ incident_id: string, incident_name: string, description?: string, video_link?: string, generated_text?: string }} body
  */
 export async function createIncident(idToken, body) {
-  const r = await fetch(`${getBaseUrl()}/api/users/me/incidents`, {
-    method: 'POST',
-    headers: authHeaders(idToken),
-    body: JSON.stringify({
-      incident_id: body.incident_id,
-      incident_name: body.incident_name,
-      description: body.description ?? '',
-      video_link: body.video_link ?? '',
-      generated_text: body.generated_text ?? '',
-    }),
-  });
+  const url = `${getBaseUrl()}/api/users/me/incidents`;
+  let r;
+  try {
+    r = await fetch(url, {
+      method: 'POST',
+      headers: authHeaders(idToken),
+      body: JSON.stringify({
+        incident_id: body.incident_id,
+        incident_name: body.incident_name,
+        description: body.description ?? '',
+        video_link: body.video_link ?? '',
+        generated_text: body.generated_text ?? '',
+      }),
+    });
+  } catch (networkError) {
+    const baseUrl = getBaseUrl();
+    throw new Error(
+      `Cannot reach backend at ${baseUrl}. Is the server running? (${networkError.message})`
+    );
+  }
   if (!r.ok) {
     const err = await r.json().catch(() => ({ detail: r.statusText }));
     throw new Error(err.detail || 'Create incident failed');

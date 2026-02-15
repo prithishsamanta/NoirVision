@@ -22,29 +22,68 @@ function WorkspacePage() {
   const idToken = auth.user?.id_token;
 
   const [incidents, setIncidents] = useState([]);
-  const [localCases, setLocalCases] = useState([]); // Local storage for unauthenticated users
   const [caseData, setCaseData] = useState(null);
   const [activeCaseId, setActiveCaseId] = useState(null);
   const [incidentsLoading, setIncidentsLoading] = useState(true);
   const [incidentsError, setIncidentsError] = useState(null);
 
-  // Simplified: No database loading, just use local storage
+  // Load incidents from DynamoDB when authenticated
   useEffect(() => {
-    setIncidentsLoading(false);
-    setIncidents([]);
-    console.log('ℹ️  Using local storage only (simplified mode)');
-  }, []);
+    if (!idToken) {
+      setIncidentsLoading(false);
+      setIncidents([]);
+      console.log('ℹ️  Not authenticated - please log in to view cases');
+      return;
+    }
+    
+    let cancelled = false;
+    setIncidentsLoading(true);
+    setIncidentsError(null);
+    
+    // Create profile if needed, then load incidents
+    usersApi.putProfile(idToken)
+      .catch((err) => {
+        console.warn('⚠️  Profile creation failed:', err.message);
+        return null;
+      })
+      .then(() => {
+        if (cancelled) return;
+        return usersApi.listIncidents(idToken);
+      })
+      .then((list) => {
+        if (cancelled) return;
+        setIncidents(Array.isArray(list) ? list : []);
+        console.log('✅ Loaded', list?.length || 0, 'incidents from DynamoDB');
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          console.error('❌ Failed to load incidents:', e.message);
+          setIncidentsError(e.message || 'Failed to load cases');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIncidentsLoading(false);
+      });
+    
+    return () => { cancelled = true; };
+  }, [idToken]);
 
-  // Simplified: No database refresh needed
+  // Refresh incidents from DynamoDB
   const refreshIncidents = useCallback(() => {
-    console.log('ℹ️  Using local storage (no database refresh needed)');
-  }, []);
+    if (!idToken) {
+      console.log('ℹ️  Not authenticated - cannot refresh');
+      return;
+    }
+    usersApi.listIncidents(idToken)
+      .then((list) => {
+        setIncidents(Array.isArray(list) ? list : []);
+        console.log('✅ Refreshed', list?.length || 0, 'incidents from DynamoDB');
+      })
+      .catch((err) => console.error('❌ Failed to refresh incidents:', err.message));
+  }, [idToken]);
 
   const handleAnalyze = useCallback((result) => {
-    console.log('✅ handleAnalyze called with result:', result);
-    console.log('✅ result.caseId:', result.caseId);
-    console.log('✅ result.keyDetections:', result.keyDetections);
-    console.log('✅ result.comparisons:', result.comparisons);
+    console.log('✅ Analysis complete, displaying results:', result.caseId);
     
     // Display results immediately
     setCaseData(result);
@@ -52,31 +91,55 @@ function WorkspacePage() {
     
     console.log('✅ caseData state updated');
     
-    // Save to local storage (simple and reliable)
-    const localCase = {
-      id: result.caseId,
-      title: result.caseTitle,
-      description: result.claim,
-      verdict: result.verdict,
-      score: result.credibilityScore,
-      timestamp: new Date().toISOString()
-    };
-    setLocalCases(prev => [localCase, ...prev].slice(0, 10));
-    console.log('✅ Case saved locally');
+    // Save to DynamoDB (required)
+    if (!idToken) {
+      console.error('❌ Not authenticated - cannot save report');
+      alert('Please log in to save your investigation report');
+      return;
+    }
     
-    // No database operations - keep it simple!
-  }, []);
+    const generatedText = JSON.stringify(result);
+    usersApi.updateIncident(idToken, result.caseId, { generated_text: generatedText })
+      .then(() => {
+        console.log('✅ Report saved to DynamoDB');
+        refreshIncidents();
+      })
+      .catch((err) => {
+        console.error('❌ Failed to save report to DynamoDB:', err.message);
+        alert(`Failed to save report: ${err.message}`);
+      });
+  }, [idToken, refreshIncidents]);
 
-  const handleSelectCase = useCallback((caseItem) => {
+  const handleSelectCase = useCallback(async (caseItem) => {
     setActiveCaseId(caseItem.id);
-    const base = caseItem.verdict === 'supported' ? MOCK_SUPPORTED_CASE : (caseItem.verdict === 'contradicted' ? MOCK_CONTRADICTED_CASE : MOCK_SUPPORTED_CASE);
+    
+    // If authenticated, try to load full report from DynamoDB
+    if (idToken) {
+      try {
+        const incident = await usersApi.getIncident(idToken, caseItem.id);
+        if (incident && incident.generated_text) {
+          // Parse the stored report
+          const storedReport = JSON.parse(incident.generated_text);
+          console.log('✅ Loaded report from DynamoDB:', caseItem.id);
+          setCaseData(storedReport);
+          return;
+        }
+      } catch (err) {
+        console.warn('⚠️  Could not load from DynamoDB:', err.message);
+      }
+    }
+    
+    // Fallback to mock data or local case
+    console.log('ℹ️  Using mock data for case:', caseItem.id);
+    const base = caseItem.verdict === 'supported' ? MOCK_SUPPORTED_CASE : 
+                 (caseItem.verdict === 'contradicted' ? MOCK_CONTRADICTED_CASE : MOCK_SUPPORTED_CASE);
     setCaseData({
       ...base,
       caseId: caseItem.id,
       caseTitle: caseItem.title,
       claim: caseItem.description || base.claim,
     });
-  }, []);
+  }, [idToken]);
 
   const handleNewCase = useCallback(() => {
     setCaseData(null);
@@ -84,20 +147,45 @@ function WorkspacePage() {
   }, []);
 
   const handleStartAnalysis = useCallback(async ({ title, claim, videoLink }) => {
-    // Simple: just generate and return a case ID
+    // Check authentication first
+    if (!idToken) {
+      console.error('❌ Not authenticated - cannot create investigation');
+      alert('Please log in to create an investigation report');
+      throw new Error('Authentication required');
+    }
+    
+    // Generate case ID
     const incidentId = `case-${Date.now()}`;
     console.log('✅ Case ID generated:', incidentId);
+    
+    // Save to DynamoDB
+    try {
+      await usersApi.createIncident(idToken, {
+        incident_id: incidentId,
+        incident_name: title,
+        description: claim || '',
+        video_link: videoLink || '',
+        generated_text: '',
+      });
+      console.log('✅ Incident created in DynamoDB:', incidentId);
+      refreshIncidents();
+    } catch (err) {
+      console.error('❌ Failed to create incident in DynamoDB:', err.message);
+      alert(`Failed to create investigation: ${err.message}`);
+      throw err;
+    }
+    
     return incidentId;
-  }, []);
+  }, [idToken, refreshIncidents]);
 
   return (
     <div className="app-shell">
       <Topbar />
       <div className="app-body">
         <Sidebar
-          cases={localCases}
-          loading={false}
-          error={null}
+          cases={incidents}
+          loading={incidentsLoading}
+          error={incidentsError}
           onSelectCase={handleSelectCase}
           activeCaseId={activeCaseId}
           onNewCase={handleNewCase}
@@ -146,15 +234,24 @@ export default function App() {
     );
   }
 
+  // Redirect to login if trying to access workspace without auth
+  if (!auth.isAuthenticated && location.pathname === '/workspace') {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect to workspace if already authenticated and on auth pages
   if (auth.isAuthenticated && isAuthPage) {
     return <Navigate to="/workspace" replace />;
   }
 
-  // Allow workspace without authentication for core analysis functionality
-  // Authentication is optional - used only for saving cases to database
-  
-  if (!auth.isAuthenticated && location.pathname === '/') {
+  // Redirect to workspace if authenticated and on root
+  if (auth.isAuthenticated && location.pathname === '/') {
     return <Navigate to="/workspace" replace />;
+  }
+  
+  // Redirect to login if not authenticated and on root
+  if (!auth.isAuthenticated && location.pathname === '/') {
+    return <Navigate to="/login" replace />;
   }
 
   return (
