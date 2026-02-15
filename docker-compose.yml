@@ -1,0 +1,57 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: noirvision-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Server settings (override if needed)
+      - HOST=0.0.0.0
+      - PORT=8000
+      # CORS (can be overridden in backend/.env)
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - noirvision-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # VITE_API_URL needs to be exported from frontend/.env before building
+        # Or set it here: VITE_API_URL=http://localhost:8000
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: noirvision-frontend
+    ports:
+      - "3000:80"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - noirvision-network
+
+networks:
+  noirvision-network:
+    driver: bridge

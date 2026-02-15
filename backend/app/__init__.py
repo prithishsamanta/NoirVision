@@ -1,1 +1,4 @@
-# NoirVision backend
+"""
+NoirVision Backend Application
+"""
+__version__ = "1.0.0"

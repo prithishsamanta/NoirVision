@@ -2,18 +2,20 @@
 TwelveLabs API wrapper: create task, poll until ready, fetch transcript/summaries/chapters.
 Isolated in one module; rest of app depends on EvidencePack, not API details.
 Uses exponential backoff for polling and a hard timeout.
+Supports: YouTube URL, public video URL, or local MP4 file (multipart upload).
 """
 from __future__ import annotations
 
 import logging
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
 
 import httpx
 
 from app.config import get_settings
-from app.models.evidence import (
+from app.models_twelvelabs.evidence import (
     EvidencePack,
     EvidencePackSource,
     EvidenceChapter,
@@ -50,11 +52,12 @@ def create_video_task(
     *,
     youtube_url: Optional[str] = None,
     video_url: Optional[str] = None,
+    video_file_path: Optional[str | Path] = None,
 ) -> tuple[str, Optional[str]]:
     """
     Create a video indexing task.
-    Pass either youtube_url or video_url (e.g. presigned S3 URL).
-    Returns (task_id, video_id). video_id may be present in response or only after polling.
+    Pass exactly one of: youtube_url, video_url (e.g. presigned S3 URL), or video_file_path (local MP4).
+    Returns (task_id, video_id).
     """
     settings = get_settings()
     if settings.twelvelabs_mock:
@@ -67,19 +70,41 @@ def create_video_task(
     if not index_id:
         raise ValueError("TWELVELABS_INDEX_ID is required for create_video_task")
 
-    source = youtube_url or video_url
-    if not source:
-        raise ValueError("Either youtube_url or video_url must be provided")
+    if video_file_path is not None:
+        path = Path(video_file_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"Video file not found: {path}")
+        with open(path, "rb") as f:
+            files = {"video_file": (path.name, f, "video/mp4")}
+            data = {"index_id": index_id}
+            with httpx.Client(timeout=120.0) as client:
+                resp = client.post(
+                    url,
+                    data=data,
+                    files=files,
+                    headers={"x-api-key": settings.twelvelabs_api_key},
+                )
+        if resp.status_code >= 400:
+            try:
+                err_body = resp.text
+                logger.warning("TwelveLabs create task failed %s: %s", resp.status_code, err_body[:500])
+            except Exception:
+                pass
+        resp.raise_for_status()
+        data = resp.json()
+    else:
+        source = youtube_url or video_url
+        if not source:
+            raise ValueError("Provide one of: youtube_url, video_url, or video_file_path")
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.post(
+                url,
+                data={"index_id": index_id, "video_url": source},
+                headers={"x-api-key": settings.twelvelabs_api_key},
+            )
+        resp.raise_for_status()
+        data = resp.json()
 
-    # API expects multipart/form-data: index_id, video_url
-    with httpx.Client(timeout=60.0) as client:
-        resp = client.post(
-            url,
-            data={"index_id": index_id, "video_url": source},
-            headers={"x-api-key": settings.twelvelabs_api_key},
-        )
-    resp.raise_for_status()
-    data = resp.json()
     task_id = data.get("_id") or data.get("id")
     video_id = data.get("video_id")
     if not task_id:
@@ -184,32 +209,48 @@ def _summarize(video_id: str, type_: str, prompt: Optional[str] = None) -> dict[
 
 def fetch_transcript(video_id: str) -> str:
     """
-    Fetch transcript for video. Uses generate endpoint with a transcript-style prompt.
+    Fetch transcript for video. Uses analyze endpoint with a transcript-style prompt.
     Returns empty string if endpoint not available or on error.
     """
     settings = get_settings()
     if settings.twelvelabs_mock:
         return "Mock transcript for demo. This is a placeholder."
 
-    # Try generate endpoint; some plans may not support it
-    url = _base_url() + "/generate"
+    # Use the /analyze endpoint for open-ended text generation
+    url = _base_url() + "/analyze"
     payload = {
         "video_id": video_id,
-        "prompt": "Provide a full transcript of all spoken words in this video, with minimal commentary.",
+        "prompt": "Provide a detailed transcript of all spoken words and dialogue in this video, with speaker identification if possible. Include timestamps where applicable.",
+        "temperature": 0.2,
+        "stream": False,
     }
     try:
         with httpx.Client(timeout=120.0) as client:
             resp = client.post(url, json=payload, headers=_headers())
         if resp.status_code != 200:
-            logger.warning("Generate (transcript) returned %s: %s", resp.status_code, resp.text)
+            logger.warning("Analyze (transcript) returned %s: %s", resp.status_code, resp.text)
             return ""
         data = resp.json()
-        # Response shape may be { "text": "..." } or similar
+        
+        # Response format from TwelveLabs: { "id": "...", "data": "text content", "finish_reason": "...", "usage": {...} }
         if isinstance(data, str):
             return data
-        return data.get("text") or data.get("generated_text") or data.get("output") or ""
+        
+        if not isinstance(data, dict):
+            logger.warning("Unexpected response format: %s", type(data))
+            return ""
+        
+        # The 'data' field contains the generated text
+        transcript = data.get("data", "")
+        if isinstance(transcript, str):
+            return transcript
+        
+        # Fallback: try other possible fields
+        return data.get("text", "") or data.get("output", "") or data.get("response", "")
     except Exception as e:
         logger.warning("Failed to fetch transcript for %s: %s", video_id, e)
+        import traceback
+        logger.debug("Traceback: %s", traceback.format_exc())
         return ""
 
 
@@ -315,20 +356,32 @@ def _mock_evidence_pack(video_id: str, source_type: str, source_url: str) -> Evi
 
 
 def run_analysis(
-    video_url: str,
-    source_type: str,
-    source_url_for_pack: str,
+    video_url: Optional[str] = None,
+    source_type: str = "youtube",
+    source_url_for_pack: Optional[str] = None,
+    video_file_path: Optional[str | Path] = None,
 ) -> EvidencePack:
     """
-    Full flow: create task (using video_url), poll until ready, build EvidencePack.
-    For YouTube, video_url is the YouTube URL; for S3, pass the presigned URL.
-    source_url_for_pack: value to store in EvidencePack.source.url (e.g. original YouTube URL or s3 key).
+    Full flow: create task, poll until ready, build EvidencePack.
+    Pass either (video_url + source_type + source_url_for_pack) or video_file_path.
+    For local MP4: video_file_path=path, source_type="s3", source_url_for_pack=path (or path as string).
     """
     settings = get_settings()
+    if video_file_path is not None:
+        path = Path(video_file_path)
+        display_url = source_url_for_pack or str(path)
+        src_type = source_type if source_url_for_pack else "s3"
+        if settings.twelvelabs_mock:
+            task_id, video_id = create_video_task(video_file_path=path)
+            return _mock_evidence_pack(video_id, src_type, display_url)
+        task_id, _ = create_video_task(video_file_path=path)
+        video_id = poll_until_ready(task_id)
+        return build_evidence_pack(video_id, src_type, display_url)
+    if not video_url or not source_url_for_pack:
+        raise ValueError("Provide video_url and source_url_for_pack, or video_file_path")
     if settings.twelvelabs_mock:
         task_id, video_id = create_video_task(video_url=video_url)
         return _mock_evidence_pack(video_id, source_type, source_url_for_pack)
-
     task_id, _ = create_video_task(video_url=video_url)
     video_id = poll_until_ready(task_id)
     return build_evidence_pack(video_id, source_type, source_url_for_pack)

@@ -1,0 +1,39 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+DOCKER.md
+
+# Environment files (use .env.example as template)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Test files
+test_*.sh
+test_*.js
+test_*.py
+
+# Temporary files
+*.tmp
+*.log
+*.cache

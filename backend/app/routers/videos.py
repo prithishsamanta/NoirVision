@@ -15,8 +15,8 @@ from app.db import (
     get_job_by_video_id,
     update_job_status,
 )
-from app.models.evidence import EvidencePack
-from app.models.jobs import (
+from app.models_twelvelabs.evidence import EvidencePack
+from app.models_twelvelabs.jobs import (
     AnalyzeRequest,
     JobStatus,
     JobStatusResponse,
@@ -93,9 +93,13 @@ def _run_analysis_task(job_id: str) -> None:
 def analyze_videos(request: AnalyzeRequest, background_tasks: BackgroundTasks) -> dict:
     """
     Submit a video for analysis. Returns job_id immediately; poll GET /analyze/{job_id} for status.
+    Requires S3_BUCKET and (unless TWELVELABS_MOCK=true) TWELVELABS_API_KEY + TWELVELABS_INDEX_ID.
     """
     _validate_analyze_request(request)
-    get_settings().require_s3()
+    settings = get_settings()
+    settings.require_s3()
+    if not settings.twelvelabs_mock:
+        settings.require_twelvelabs()
 
     source_type = request.get_source_type()
     source_url = request.get_source_url()

@@ -1,34 +1,102 @@
 import { useState, useRef } from 'react';
+import { analyzeComplete, transformBackendResponse } from '../api/analysis';
 import { MOCK_SUPPORTED_CASE, MOCK_CONTRADICTED_CASE } from '../data/mockData';
 
-export default function Workspace({ caseData, onAnalyze }) {
+export default function Workspace({ caseData, onAnalyze, onStartAnalysis }) {
     const [title, setTitle] = useState('');
     const [claim, setClaim] = useState('');
     const [fileName, setFileName] = useState('');
+    const [videoFile, setVideoFile] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisProgress, setAnalysisProgress] = useState('');
+    const [error, setError] = useState(null);
     const fileInputRef = useRef(null);
 
     const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
-        if (file) setFileName(file.name);
+        if (file) {
+            setFileName(file.name);
+            setVideoFile(file);
+            setError(null);
+        }
     };
 
     const handleDrop = (e) => {
         e.preventDefault();
         setIsDragging(false);
         const file = e.dataTransfer.files?.[0];
-        if (file) setFileName(file.name);
+        if (file) {
+            setFileName(file.name);
+            setVideoFile(file);
+            setError(null);
+        }
     };
 
-    const handleSubmit = () => {
-        if (!fileName || !claim.trim() || !title.trim()) return;
+    const handleSubmit = async () => {
+        if (!claim.trim() || !title.trim()) {
+            setError('Please provide both a case title and witness claim');
+            return;
+        }
+
+        if (!videoFile) {
+            setError('Please upload a video file');
+            return;
+        }
+
         setIsAnalyzing(true);
-        setTimeout(() => {
-            const mockResult = Math.random() > 0.5 ? MOCK_SUPPORTED_CASE : MOCK_CONTRADICTED_CASE;
-            onAnalyze({ ...mockResult, claim, caseTitle: title.trim() });
+        setError(null);
+        setAnalysisProgress('Creating case...');
+
+        try {
+            // Step 1: Create case ID
+            const caseId = await onStartAnalysis({
+                title: title.trim(),
+                claim: claim.trim(),
+                videoLink: ''
+            });
+            
+            console.log('Case ID:', caseId);
+
+            // Step 2: Upload and analyze with backend
+            setAnalysisProgress('Uploading video...');
+            setAnalysisProgress('Processing video with TwelveLabs...');
+            
+            const response = await analyzeComplete({
+                claim: claim.trim(),
+                videoFile: videoFile,
+                caseId: caseId
+            });
+
+            setAnalysisProgress('Analyzing credibility with AI...');
+
+            // Step 3: Transform response to frontend format
+            console.log('Backend response received:', response);
+            const transformedData = transformBackendResponse(response);
+            console.log('Transformed data:', transformedData);
+            
+            // Step 4: Pass to parent component to display
+            onAnalyze({
+                ...transformedData,
+                claim: claim.trim(),
+                caseTitle: title.trim()
+            });
+            
+            console.log('Analysis complete - should display now!');
+
+            // Reset form
+            setTitle('');
+            setClaim('');
+            setFileName('');
+            setVideoFile(null);
+            
+        } catch (err) {
+            console.error('Analysis failed:', err);
+            setError(err.message || 'Analysis failed. Please try again.');
+        } finally {
             setIsAnalyzing(false);
-        }, 2500);
+            setAnalysisProgress('');
+        }
     };
 
     // ============================
@@ -48,8 +116,11 @@ export default function Workspace({ caseData, onAnalyze }) {
                     <p className="text-xl mb-3" style={{ fontFamily: 'var(--font-typewriter)', color: 'var(--color-gold-400)' }}>
                         ANALYZING EVIDENCE...
                     </p>
-                    <p className="text-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-noir-400)' }}>
-                        Cross-referencing claim against video timeline
+                    <p className="text-sm mb-2" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-noir-400)' }}>
+                        {analysisProgress || 'Cross-referencing claim against video timeline'}
+                    </p>
+                    <p className="text-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-noir-500)' }}>
+                        This may take 50-60 seconds...
                     </p>
                 </div>
             </div>
@@ -187,7 +258,6 @@ export default function Workspace({ caseData, onAnalyze }) {
                         <div style={{ paddingLeft: '8px' }}>
                             {caseData.comparisons.map((comp, i) => (
                                 <div key={i} className="flex gap-3 mb-4 items-start">
-                                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚖️</span>
                                     <span style={{ fontFamily: 'var(--font-typewriter)', fontSize: '0.84rem', color: 'var(--color-noir-100)', lineHeight: 1.5 }}>
                                         <span style={{ fontWeight: 600, color: 'var(--color-noir-100)' }}>{comp.label}: </span>
                                         <span style={{
@@ -240,7 +310,6 @@ export default function Workspace({ caseData, onAnalyze }) {
 
                         {/* Status */}
                         <div className="flex items-center gap-3 mb-6">
-                            <span style={{ fontSize: '1.1rem' }}>{isSupported ? '✅' : '❌'}</span>
                             <span style={{
                                 fontFamily: 'var(--font-typewriter)',
                                 fontSize: '0.9rem',
@@ -257,17 +326,15 @@ export default function Workspace({ caseData, onAnalyze }) {
                             INVESTIGATION RECOMMENDATION:
                         </p>
                         <div style={{ paddingLeft: '12px' }}>
-                            {caseData.recommendations.map((rec, i) => (
-                                <p key={i} style={{
-                                    fontFamily: 'var(--font-typewriter)',
-                                    fontSize: '0.84rem',
-                                    color: 'var(--color-noir-200)',
-                                    lineHeight: 1.7,
-                                    marginBottom: '10px',
-                                }}>
-                                    → {rec}
-                                </p>
-                            ))}
+                            <p style={{
+                                fontFamily: 'var(--font-typewriter)',
+                                fontSize: '0.84rem',
+                                color: 'var(--color-noir-200)',
+                                lineHeight: 1.7,
+                                marginBottom: '10px',
+                            }}>
+                                → {caseData.recommendation}
+                            </p>
                         </div>
                     </ReportSection>
 
@@ -505,6 +572,21 @@ export default function Workspace({ caseData, onAnalyze }) {
                     >
                         ▶ BEGIN INVESTIGATION
                     </button>
+                    
+                    {/* Error Display */}
+                    {error && (
+                        <div className="mt-4 p-4 rounded-lg" style={{
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            border: '1px solid var(--color-verdict-red)',
+                        }}>
+                            <p className="text-sm" style={{
+                                fontFamily: 'var(--font-mono)',
+                                color: 'var(--color-verdict-red-light)',
+                            }}>
+                                {error}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

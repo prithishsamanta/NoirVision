@@ -1,0 +1,27 @@
+# Docker Compose Override Example
+# Copy this to docker-compose.override.yml for local development overrides
+# This file is automatically loaded by docker-compose if it exists
+
+version: '3.8'
+
+services:
+  backend:
+    # Mount source code for development (hot reload)
+    volumes:
+      - ./backend:/app
+      - ./backend/data:/app/data
+    # Override command for development with reload
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+
+  frontend:
+    # For development, you might want to use the dev server instead
+    # Uncomment below and comment out the build stage in Dockerfile
+    # build:
+    #   context: ./frontend
+    #   dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
